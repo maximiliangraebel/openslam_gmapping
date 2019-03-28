@@ -142,7 +142,7 @@ namespace GMapping {
     
     //methods for accessing the parameters
     void setSensorMap(const SensorMap& smap);
-    void init(unsigned int size, double xmin, double ymin, double xmax, double ymax, double delta, 
+    void init(unsigned int size, double xmin, double ymin, double xmax, double ymax, double delta,
 	      OrientedPoint initialPose=OrientedPoint(0,0,0));
     void setMatchingParameters(double urange, double range, double sigma, int kernsize, double lopt, double aopt, 
 			       int iterations, double likelihoodSigma=1, double likelihoodGain=1, unsigned int likelihoodSkip=0);
@@ -153,7 +153,7 @@ namespace GMapping {
     //the "core" algorithm
     void processTruePos(const OdometryReading& odometry);
     bool processScan(const RangeReading & reading, int adaptParticles=0);
-    
+
     /**This method copies the state of the filter in a tree.
      The tree is represented through reversed pointers (each node has a pointer to its parent).
      The leafs are stored in a vector, whose size is the same as the number of particles.
@@ -251,6 +251,7 @@ namespace GMapping {
     unsigned int m_beams;
     double last_update_time_;
     double period_;
+    double start_up_time_;
     
     /**the particles*/
     ParticleVector m_particles;
@@ -311,7 +312,7 @@ namespace GMapping {
   private:
     
     /**scanmatches all the particles*/
-    inline void scanMatch(const double *plainReading);
+    inline void scanMatch(const double *plainReading, const double *intensities);
     /**normalizes the particle weights*/
     inline void normalize();
     

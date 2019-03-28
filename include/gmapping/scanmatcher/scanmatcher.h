@@ -21,13 +21,13 @@ class ScanMatcher{
 		double optimize(OrientedPoint& pnew, const ScanMatcherMap& map, const OrientedPoint& p, const double* readings) const;
 		double optimize(OrientedPoint& mean, CovarianceMatrix& cov, const ScanMatcherMap& map, const OrientedPoint& p, const double* readings) const;
 		
-		double   registerScan(ScanMatcherMap& map, const OrientedPoint& p, const double* readings);
+		double registerScan(ScanMatcherMap& map, const OrientedPoint& p, const double* readings, const double* intensities);
 		void setLaserParameters
 			(unsigned int beams, double* angles, const OrientedPoint& lpose);
 		void setMatchingParameters
 			(double urange, double range, double sigma, int kernsize, double lopt, double aopt, int iterations, double likelihoodSigma=1, unsigned int likelihoodSkip=0 );
 		void invalidateActiveArea();
-		void computeActiveArea(ScanMatcherMap& map, const OrientedPoint& p, const double* readings);
+		void computeActiveArea(ScanMatcherMap& map, const OrientedPoint& p, const double* readings, const double* intensities);
 
 		inline double icpStep(OrientedPoint & pret, const ScanMatcherMap& map, const OrientedPoint& p, const double* readings) const;
 		inline double score(const ScanMatcherMap& map, const OrientedPoint& p, const double* readings) const;
@@ -68,6 +68,7 @@ class ScanMatcher{
 		PARAM_SET_GET(double, linearOdometryReliability, protected, public, public)
 		PARAM_SET_GET(double, freeCellRatio, protected, public, public)
 		PARAM_SET_GET(unsigned int, initialBeamsSkip, protected, public, public)
+		PARAM_SET_GET(unsigned int, ultrasonic_intensity, protected, public, public)
 
 		// allocate this large array only once
 		IntPoint* m_linePoints;

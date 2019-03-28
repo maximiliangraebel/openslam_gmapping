@@ -168,7 +168,7 @@ void GridSlamProcessor::integrateScanSequence(GridSlamProcessor::TNode* node){
 			
 			//register the scan
 			m_matcher.invalidateActiveArea();
-			m_matcher.computeActiveArea(it->map, it->pose, plainReading);
+			m_matcher.computeActiveArea(it->map, it->pose, plainReading, NULL);
 			it->weight+=dw;
 			it->weightSum+=dw;
 

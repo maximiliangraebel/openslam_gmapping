@@ -104,7 +104,6 @@ void ScanMatcher::computeActiveArea(ScanMatcherMap& map, const OrientedPoint& p,
 void ScanMatcher::registerScan(ScanMatcherMap& map, const OrientedPoint& p, const double* readings){
 	if (!m_activeAreaComputed)
 		computeActiveArea(map, p, readings);
-		
 	//this operation replicates the cells that will be changed in the registration operation
 	map.storage().allocActiveArea();
 	

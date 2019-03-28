@@ -12,12 +12,15 @@ using namespace std;
 RangeReading::RangeReading(const RangeSensor* rs, double time):
 	SensorReading(rs,time){}
 
-RangeReading::RangeReading(unsigned int n_beams, const double* d, const RangeSensor* rs, double time):
+RangeReading::RangeReading(unsigned int n_beams, const double* d, const RangeSensor* rs, double time,
+		                   const double* intensities):
 	SensorReading(rs,time){
 	assert(n_beams==rs->beams().size());
 	resize(n_beams);
-	for (unsigned int i=0; i<size(); i++)
-		(*this)[i]=d[i];
+	this->intensities = intensities;
+	for (unsigned int i=0; i<size(); i++) {
+		(*this)[i] = d[i];
+	}
 }
 
 RangeReading::~RangeReading(){

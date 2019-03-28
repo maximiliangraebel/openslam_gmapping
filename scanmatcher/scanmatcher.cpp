@@ -19,7 +19,7 @@ ScanMatcher::ScanMatcher(): m_laserPose(0,0,0){
 	m_optRecursiveIterations=3;
 	m_activeAreaComputed=false;
 
-	// This  are the dafault settings for a grid map of 5 cm
+	// This are the default settings for a grid map of 5 cm
 	m_llsamplerange=0.01;
 	m_llsamplestep=0.01;
 	m_lasamplerange=0.005;
@@ -30,6 +30,7 @@ ScanMatcher::ScanMatcher(): m_laserPose(0,0,0){
 	m_linearOdometryReliability=0.;
 	m_freeCellRatio=sqrt(2.);
 	m_initialBeamsSkip=0;
+	m_ultrasonic_intensity=1;
 	
 /*	
 	// This  are the dafault settings for a grid map of 10 cm
@@ -113,7 +114,8 @@ void ScanMatcher::computeActiveArea(ScanMatcherMap& map, const OrientedPoint& p,
 	m_activeAreaComputed=true;
 }
 */
-void ScanMatcher::computeActiveArea(ScanMatcherMap& map, const OrientedPoint& p, const double* readings){
+void ScanMatcher::computeActiveArea(ScanMatcherMap& map, const OrientedPoint& p, const double* readings,
+                                    const double* intensities){
 	if (m_activeAreaComputed)
 		return;
 	OrientedPoint lp=p;
@@ -212,9 +214,10 @@ void ScanMatcher::computeActiveArea(ScanMatcherMap& map, const OrientedPoint& p,
 	m_activeAreaComputed=true;
 }
 
-double ScanMatcher::registerScan(ScanMatcherMap& map, const OrientedPoint& p, const double* readings){
+double ScanMatcher::registerScan(ScanMatcherMap& map, const OrientedPoint& p, const double* readings,
+								 const double* intensities){
 	if (!m_activeAreaComputed)
-		computeActiveArea(map, p, readings);
+		computeActiveArea(map, p, readings, intensities);
 		
 	//this operation replicates the cells that will be changed in the registration operation
 	map.storage().allocActiveArea();
@@ -225,12 +228,18 @@ double ScanMatcher::registerScan(ScanMatcherMap& map, const OrientedPoint& p, co
 	lp.theta+=m_laserPose.theta;
 	IntPoint p0=map.world2map(lp);
 	
-	
 	const double * angle=m_laserAngles+m_initialBeamsSkip;
 	double esum=0;
-	for (const double* r=readings+m_initialBeamsSkip; r<readings+m_laserBeams; r++, angle++)
+	const double* intensity =intensities+m_initialBeamsSkip;
+	int filter_size = 5; // filter_size x filter_size filter eg. 3 --> 3x3 filter
+	assert(filter_size % 2 == 1);
+	int filter_diff = (int) (ceil(filter_size / 2) - 1);
+
+	for (const double* r=readings+m_initialBeamsSkip; r<readings+m_laserBeams; r++, angle++, intensity++)
 		if (m_generateMap){
 			double d=*r;
+			double intens=*intensity; // right intensity here
+			//cout << ", " << intens;
 			if (d>m_laserMaxRange||d==0.0||isnan(d))
 				continue;
 			if (d>m_usableRange)
@@ -250,9 +259,32 @@ double ScanMatcher::registerScan(ScanMatcherMap& map, const OrientedPoint& p, co
 			}
 			if (d<m_usableRange){
 				double e=-map.cell(p1).entropy();
-				map.cell(p1).update(true, phit);
-				e+=map.cell(p1).entropy();
-				esum+=e;
+				// mark points as glass if they come from an ultrasonic sensor and no laser point is close
+				if (intens == m_ultrasonic_intensity) {
+					// check neighbours, ignore point if a occupied or glass point is close
+					for (int x = p1.x - filter_diff; x <= p1.x + filter_diff; x++) {
+						for (int y = p1.y - filter_diff; y <= p1.y + filter_diff; y++) {
+							if (map.cell(IntPoint(x,y)) > 0.25 || map.cell(IntPoint(x,y)).isGlassDetected()) {
+								//cout << "FILTERED POINT";
+								continue;
+							}
+						}
+					}
+					map.cell(p1).updateGlass();
+					map.cell(p1).incGlass();
+				} else { // laser point
+					for (int x = p1.x - filter_diff; x <= p1.x + filter_diff; x++) {
+						for (int y = p1.y - filter_diff; y <= p1.y + filter_diff; y++) {
+							if (map.cell(IntPoint(x,y)).isGlassDetected() && p1.x != x && p1.y != y) {
+								map.cell(IntPoint(x,y)).resetGlass();
+							}
+						}
+					}
+					map.cell(p1).update(true, phit);
+					map.cell(p1).resetGlass();
+					e+=map.cell(p1).entropy();
+					esum+=e;
+				}
 			}
 		} else {
 			if (*r>m_laserMaxRange||*r>m_usableRange||*r==0.0||isnan(*r)) continue;
@@ -263,7 +295,6 @@ double ScanMatcher::registerScan(ScanMatcherMap& map, const OrientedPoint& p, co
 			assert(p1.x>=0 && p1.y>=0);
 			map.cell(p1).update(true,phit);
 		}
-	//cout  << "informationGain=" << -esum << endl;
 	return esum;
 }
 

@@ -314,8 +314,7 @@ void GridSlamProcessor::setMotionModelParameters
   
   
   bool GridSlamProcessor::processScan(const RangeReading & reading, int adaptParticles){
-    
-    /**retireve the position from the reading, and compute the odometry*/
+    /**retrieve the position from the reading, and compute the odometry*/
     OrientedPoint relPose=reading.getPose();
     if (!m_count){
       m_lastPartPose=m_odoPose=relPose;
@@ -375,37 +374,38 @@ void GridSlamProcessor::setMotionModelParameters
     }
     
     m_odoPose=relPose;
-    
     bool processed=false;
 
     // process a scan only if the robot has traveled a given distance or a certain amount of time has elapsed
     if (! m_count 
-	|| m_linearDistance>=m_linearThresholdDistance 
-	|| m_angularDistance>=m_angularThresholdDistance
-    || (period_ >= 0.0 && (reading.getTime() - last_update_time_) > period_)){
+        || m_linearDistance>=m_linearThresholdDistance
+        || m_angularDistance>=m_angularThresholdDistance
+        || (period_ >= 0.0 && (reading.getTime() - last_update_time_) > period_))
+    {
       last_update_time_ = reading.getTime();      
 
       if (m_outputStream.is_open()){
-	m_outputStream << setiosflags(ios::fixed) << setprecision(6);
-	m_outputStream << "FRAME " <<  m_readingCount;
-	m_outputStream << " " << m_linearDistance;
-	m_outputStream << " " << m_angularDistance << endl;
+        m_outputStream << setiosflags(ios::fixed) << setprecision(6);
+        m_outputStream << "FRAME " <<  m_readingCount;
+        m_outputStream << " " << m_linearDistance;
+        m_outputStream << " " << m_angularDistance << endl;
       }
       
       if (m_infoStream)
-	m_infoStream << "update frame " <<  m_readingCount << endl
-		     << "update ld=" << m_linearDistance << " ad=" << m_angularDistance << endl;
+        m_infoStream << "update frame " <<  m_readingCount << endl
+        << "update ld=" << m_linearDistance << " ad=" << m_angularDistance << endl;
       
       
-      cerr << "Laser Pose= " << reading.getPose().x << " " << reading.getPose().y 
+      cerr << "Laser Pose= " << reading.getPose().x << " " << reading.getPose().y
 	   << " " << reading.getPose().theta << endl;
       
-      
+
       //this is for converting the reading in a scan-matcher feedable form
       assert(reading.size()==m_beams);
       double * plainReading = new double[m_beams];
       for(unsigned int i=0; i<m_beams; i++){
-	plainReading[i]=reading[i];
+	    plainReading[i]=reading[i];
+	    //cout << "I-," << reading.intensities[i];
       }
       m_infoStream << "m_count " << m_count << endl;
 
@@ -413,47 +413,48 @@ void GridSlamProcessor::setMotionModelParameters
               new RangeReading(reading.size(),
                                &(reading[0]),
                                static_cast<const RangeSensor*>(reading.getSensor()),
-                               reading.getTime());
+                               reading.getTime(),
+                               reading.intensities);
 
       if (m_count>0){
-	scanMatch(plainReading);
-	if (m_outputStream.is_open()){
-	  m_outputStream << "LASER_READING "<< reading.size() << " ";
-	  m_outputStream << setiosflags(ios::fixed) << setprecision(2);
-	  for (RangeReading::const_iterator b=reading.begin(); b!=reading.end(); b++){
-	    m_outputStream << *b << " ";
-	  }
-	  OrientedPoint p=reading.getPose();
-	  m_outputStream << setiosflags(ios::fixed) << setprecision(6);
-	  m_outputStream << p.x << " " << p.y << " " << p.theta << " " << reading.getTime()<< endl;
-	  m_outputStream << "SM_UPDATE "<< m_particles.size() << " ";
-	  for (ParticleVector::const_iterator it=m_particles.begin(); it!=m_particles.end(); it++){
-	    const OrientedPoint& pose=it->pose;
-	    m_outputStream << setiosflags(ios::fixed) << setprecision(3) <<  pose.x << " " << pose.y << " ";
-	    m_outputStream << setiosflags(ios::fixed) << setprecision(6) <<  pose.theta << " " << it-> weight << " ";
-	  }
-	  m_outputStream << endl;
-	}
-	onScanmatchUpdate();
-	
-	updateTreeWeights(false);
-				
-	if (m_infoStream){
-	  m_infoStream << "neff= " << m_neff  << endl;
-	}
-	if (m_outputStream.is_open()){
-	  m_outputStream << setiosflags(ios::fixed) << setprecision(6);
-	  m_outputStream << "NEFF " << m_neff << endl;
-	}
- 	resample(plainReading, adaptParticles, reading_copy);
-	
+        scanMatch(plainReading, reading.intensities);
+        if (m_outputStream.is_open()){
+          m_outputStream << "LASER_READING "<< reading.size() << " ";
+          m_outputStream << setiosflags(ios::fixed) << setprecision(2);
+          for (RangeReading::const_iterator b=reading.begin(); b!=reading.end(); b++){
+            m_outputStream << *b << " ";
+          }
+          OrientedPoint p=reading.getPose();
+          m_outputStream << setiosflags(ios::fixed) << setprecision(6);
+          m_outputStream << p.x << " " << p.y << " " << p.theta << " " << reading.getTime()<< endl;
+          m_outputStream << "SM_UPDATE "<< m_particles.size() << " ";
+          for (ParticleVector::const_iterator it=m_particles.begin(); it!=m_particles.end(); it++){
+            const OrientedPoint& pose=it->pose;
+            m_outputStream << setiosflags(ios::fixed) << setprecision(3) <<  pose.x << " " << pose.y << " ";
+            m_outputStream << setiosflags(ios::fixed) << setprecision(6) <<  pose.theta << " " << it-> weight << " ";
+          }
+          m_outputStream << endl;
+        }
+        onScanmatchUpdate();
+
+        updateTreeWeights(false);
+
+        if (m_infoStream){
+          m_infoStream << "neff= " << m_neff  << endl;
+        }
+        if (m_outputStream.is_open()){
+          m_outputStream << setiosflags(ios::fixed) << setprecision(6);
+          m_outputStream << "NEFF " << m_neff << endl;
+        }
+        resample(plainReading, adaptParticles, reading_copy);
       } else {
 	m_infoStream << "Registering First Scan"<< endl;
+
 	for (ParticleVector::iterator it=m_particles.begin(); it!=m_particles.end(); it++){	
 	  m_matcher.invalidateActiveArea();
-	  m_matcher.computeActiveArea(it->map, it->pose, plainReading);
-	  m_matcher.registerScan(it->map, it->pose, plainReading);
-	  
+	  m_matcher.computeActiveArea(it->map, it->pose, plainReading, reading.intensities);
+	  m_matcher.registerScan(it->map, it->pose, plainReading, reading.intensities);
+
 	  // cyr: not needed anymore, particles refer to the root in the beginning!
 	  TNode* node=new	TNode(it->pose, 0., it->node,  0);
 	  //node->reading=0;
@@ -475,7 +476,7 @@ void GridSlamProcessor::setMotionModelParameters
       
       //keep ready for the next step
       for (ParticleVector::iterator it=m_particles.begin(); it!=m_particles.end(); it++){
-	it->previousPose=it->pose;
+	    it->previousPose=it->pose;
       }
       
     }

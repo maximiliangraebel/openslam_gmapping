@@ -6,7 +6,7 @@
 
 /**Just scan match every single particle.
 If the scan matching fails, the particle gets a default likelihood.*/
-inline void GridSlamProcessor::scanMatch(const double* plainReading){
+inline void GridSlamProcessor::scanMatch(const double* plainReading, const double* intensities){
   // sample a new pose from each scan in the reference
   
   double sumScore=0;
@@ -33,7 +33,7 @@ inline void GridSlamProcessor::scanMatch(const double* plainReading){
     //set up the selective copy of the active area
     //by detaching the areas that will be updated
     m_matcher.invalidateActiveArea();
-    m_matcher.computeActiveArea(it->map, it->pose, plainReading);
+    m_matcher.computeActiveArea(it->map, it->pose, plainReading, intensities);
   }
   if (m_infoStream)
     m_infoStream << "Average Scan Matching Score=" << sumScore/m_particles.size() << std::endl;	
@@ -141,7 +141,7 @@ inline bool GridSlamProcessor::resample(const double* plainReading, int adaptSiz
     for (ParticleVector::iterator it=temp.begin(); it!=temp.end(); it++){
       it->setWeight(0);
       m_matcher.invalidateActiveArea();
-      m_matcher.registerScan(it->map, it->pose, plainReading);
+      m_matcher.registerScan(it->map, it->pose, plainReading, reading->intensities);
       m_particles.push_back(*it);
     }
     std::cerr  << " Done" <<std::endl;
@@ -162,7 +162,7 @@ inline bool GridSlamProcessor::resample(const double* plainReading, int adaptSiz
 
       //END: BUILDING TREE
       m_matcher.invalidateActiveArea();
-      m_matcher.registerScan(it->map, it->pose, plainReading);
+      m_matcher.registerScan(it->map, it->pose, plainReading, reading->intensities);
       it->previousIndex=index;
       index++;
       node_it++;
